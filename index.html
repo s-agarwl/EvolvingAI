@@ -2,14 +2,19 @@
 
 <head>
     <meta charset="utf-8">
-    <title style="color:rgb(0, 0, 0)">Visualizing the competetive evolution of game playing AI</title>
+    <title>Visualizing the competetive evolution of game playing AI</title>
+
+    <link rel="stylesheet" type="text/css" href="tooltipster.bundle.css" />
+
     <script src="d3.min.js"></script>
     <script src="jquery.min.js"></script>
-    <script type="text/javascript" src="jquery-ui.js"></script>
+    <!-- <script type="text/javascript" src="jquery-ui.js"></script> -->
+    <script type="text/javascript" src="tooltipster.bundle.js"></script>
     <script type="text/javascript" src="parcoords.js"></script>
     <script type="text/javascript" src="data.js"></script>
     <link rel="stylesheet" href="parcoords.css" type='text/css' media='all'>
-    <link rel="stylesheet" href="jquery-ui.css" type='text/css' media='all'>
+    <!-- <link rel="stylesheet" href="jquery-ui.css" type='text/css' media='all'> -->
+    <link rel="stylesheet" href="tooltipster-sideTip-shadow.min.css" type='text/css' media='all'>
 
     <style> 
         body
@@ -121,8 +126,26 @@
             padding-left: 10px;
             padding-right: 10px;
         }
-        .infoIcon{
-            cursor: pointer;
+        
+
+        /* Use this next selector to style things like font-size and line-height: */
+        .my-custom-theme .tooltipster-content {
+            font-family: Arial, sans-serif;
+            /* font-size: 14px; */
+            line-height: 24px;
+            padding: 8px 10px;
+        }
+
+        .tooltip-image-theme .tooltipster-content{
+            /* height: 300px; */
+            /* width: 250px; */
+            /* font-size: 14px; */
+            display: flex;
+        }
+
+        .tooltip_templates
+        {
+            display:none;
         }
 
     </style>
@@ -131,8 +154,17 @@
 
 
 <body>
+    <div class="tooltip_templates">
+        <div id="pommermanDetails">
+            A bomb laying game played by two teams of two agents each.
+            <br/>
+            <br/>
+            <img height="200px" src="pommerman.gif" />
+        </div>
+    </div>
+
     <h3 style="text-align: center; margin: auto">Visualizing Evolution of Multi-agent Game-playing Behaviors</h3>
-    <p style="text-align: center; margin: auto">Training <span class="teamA">Neural Network</span> team (two agents) to play against <span class="teamB">Hakozaki Junctions</span> (fully trained) in the <a href="https://www.pommerman.com/" target="_blank">Pommerman</a> Game Environment</p>
+    <p style="text-align: center; margin: auto">Training <span class="teamA">Neural Network</span> <span id="NNInfo">ⓘ</span> team (two agents) to play against <span class="teamB">Hakozaki Junctions</span> <span id="hakozakiInfo">ⓘ</span> (fully trained) in the <a href="https://www.pommerman.com/" target="_blank">Pommerman</a>  Game Environment <span id="pommermanInfo" class="" data-tooltip-content="#pommermanDetails">ⓘ</span></p>
     <!-- Use subtitle -->
 
     
@@ -910,31 +942,23 @@
             let corrIntensity = computeCorrelationIntensityText(corrWithWin);
            
 
-            let appendedText =  `<span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText '>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}" bindex=${metric}>ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
-                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" bindex=${parseInt(metric[0])}}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
-                    The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon behavior" bindex=${parseInt(maxCorr[metric][2])}>ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
+            let appendedText =  `<span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText '>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
+                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
+                    The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon behavior" title="${behaviorDefinitions[maxCorr[metric][2]]}">ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
             let extraText = "";
             if(metric > 2)
             {
-                extraText = ` The selected behavior <span class="dynamicText">${maxCorr[metric][1]}</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span> <span class="infoIcon behavior" bindex=0>ⓘ</span> behavior.`;
+                extraText = ` The selected behavior <span class="dynamicText">${maxCorr[metric][1]}</span>  <span class="infoIcon behavior" title="${behaviorDefinitions[maxCorr[metric][0]]}">ⓘ</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span>  <span class="infoIcon behavior" title="${behaviorDefinitions[0]}">ⓘ</span> behavior.`;
             }
-                div1.append("text").html(`<p>${appendedText}${extraText}</p>`)
+
+            div1.append("text").html(`<p>${appendedText}${extraText}</p>`)
                 // .style("font-size",divFontSize)
                 .style("font-style",divFontStyle)
-                .style("color",divFontColor)
-                
-            
-            // .on('mouseout', '.className', function () {
-            //     var className = getClassNameFromClassSpan(this);
-            //     if (haveClassToPersist) {
-            //     c(className);
-            //     }
-            //     else {
-            //     removePersistentHighlighting(className);
-            //     removeHoverHighlighting(className);
-            //     }
-            // })
-            ;
+                .style("color",divFontColor);
+
+            $('.infoIcon').tooltipster({
+                theme: 'my-custom-theme'
+            });
 
         }
         function roundOff(val)
@@ -1885,12 +1909,27 @@
 
     parallelplot(rev_data);
 
-    $(".behavior").on("mouseover", function () {
-    var bindex = $(this).attr("bindex");
-    $(this).tooltip({
-        content: behaviorDefinitions[parseInt(bindex)]
-    });
-})
+    // $(document).tooltip();
+    // $("#pommermanInfo").tooltip({
+    //     content: '<img src = "./pommerman.png"/>'
+    // });
+    $(document).ready(function() {
+            $('.infoIcon').tooltipster({
+                // theme: 'tooltipster-shadow',
+                theme: 'my-custom-theme'
+            });
+            $('#pommermanInfo').tooltipster({
+                theme: 'tooltip-image-theme'
+            });
+            $('#hakozakiInfo').tooltipster({
+                theme: 'my-custom-theme',
+                content: $('<span>Best team in Pommerman. It is based on a tree search based technique.</span>')
+            });
+            $('#NNInfo').tooltipster({
+                theme: 'my-custom-theme',
+                content: $('<span>A deep reinforcement learning (<i>Skynet955</i>) based technique, which we train from scratch.</span>')
+            });
+        });
 //    zoomPage();
 }
 

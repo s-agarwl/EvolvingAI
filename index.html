@@ -8,6 +8,7 @@
         {
             background-color: rgb(0, 0, 0);
             font-family: system-ui;
+            font-size: 20px;
             position: fixed;
             width: 100%;
             left: 0%;
@@ -76,6 +77,7 @@
         {
             float: left;
             margin: 5px;
+            margin-top:10px;
             padding: 2px;
             display: grid;
             text-align: center;
@@ -104,6 +106,9 @@
         .dynamicText{
             font-weight:700;
         }
+        .computedText{
+            font-style:italic;
+        }
         #div1{
             padding-left: 10px;
             padding-right: 10px;
@@ -124,7 +129,7 @@
 
 <body>
     <h2 style="text-align: center; margin: auto">Visualizing Evolution of Multi-agent Game-playing Behaviors</h2>
-    <p style="text-align: center; margin: auto">Training <span class="teamA">Neural Network</span> team (two agents) competing against <span class="teamB">Hakozaki Junctions</span> (fully trained) in <a href="https://www.pommerman.com/">Pommerman</a> Game Environment</p>
+    <p style="text-align: center; margin: auto">Training <span class="teamA">Neural Network</span> team (two agents) to play against <span class="teamB">Hakozaki Junctions</span> (fully trained) in the <a href="https://www.pommerman.com/" target="_blank">Pommerman</a> Game Environment</p>
     <!-- Use subtitle -->
 
     
@@ -319,7 +324,7 @@
                 }
             }
         }
-        // console.log("correlation: ", correlation);
+        console.log("correlation: ", correlation);
 
         // Create array with the highest correlation for each behavior
         let maximalCorr=[0,0,0,0,0];
@@ -418,11 +423,12 @@
         let negativeColor = "red";
         let nuetralColor = "black";
 
-        let font1 = "14px system-ui";
-        let font2 = "16px system-ui";
-        let font3 = "14px system-ui";
+        let font1 = "18px system-ui";  //tick labels
+        let font2 = "20px system-ui";
+        let font3 = "18px system-ui";
+        let tickLabelSize =  "14px system-ui"; 
 
-        let divFontSize="16px";
+        let divFontSize="20px";
         let divFontStyle="";
 
         let selectWidth=100;
@@ -440,7 +446,7 @@
         let svg1MarginLeft=0;
 
         let lineChartHeight=150;
-        let lineChartWidth=svg1Width-80;
+        let lineChartWidth=svg1Width-90;
 
         let svg2Width=width*0.5;
         let svg2Height=height*0.7;
@@ -543,8 +549,8 @@
 
         // Draw the Scatterplot Matrix
         let agent=0;
-        let xRoot2=50;
-        let yRoot2=svg2Height*0.95;
+        let xRoot2=5;
+        let yRoot2=svg2Height-120;
         appendScatterplotMatrix(cycle_results,xRoot2,yRoot2);
 
         // Fill select1 with the behavior labels
@@ -638,8 +644,27 @@
 
 
 
+        function computeCorrelation(metric1, metric2)
+        {
+            let maxMetric1=roundOff(m[metric1].reduce(function(a,b){return Math.max(a,b);}));
+            let maxMetric2=roundOff(m[metric2].reduce(function(a,b){return Math.max(a,b);}));
+            let iC=0, iA=0, iB=0;
+            let data = new Array(m[metric1],m[metric2]);
+            let corr = pearsonCorrelation(data,0,1);
+            return corr;
+        }
 
+        function computeCorrelationIntensityText(corrWithWin)
+        {
+            let corrIntensity = "";
+            if(corrWithWin < -0.5) corrIntensity = "a negative";
+            else if(corrWithWin < -0.25) corrIntensity = "a low negative";
+            else if(corrWithWin < 0.25) corrIntensity = "almost no";
+            else if(corrWithWin < 0.5) corrIntensity = "a low positive";
+            else if(corrWithWin <= 1) corrIntensity = "a positive";
 
+            return corrIntensity;
+        }
 
 
         // ########## FUNCTIONS ##########
@@ -653,30 +678,48 @@
             let maxMetric1=roundOff(m[metric1].reduce(function(a,b){return Math.max(a,b);}));
             let maxMetric2=roundOff(m[metric2].reduce(function(a,b){return Math.max(a,b);}));
             let iC=0, iA=0, iB=0;
-            let data = new Array(m[metric1],m[metric2]);
-            let corr = pearsonCorrelation(data,0,1);
-            
+            // let data = new Array(m[metric1],m[metric2]);
+            let corr = computeCorrelation(metric1, metric2);
+            let corrIntensity = computeCorrelationIntensityText(corr);
             // Write Legend
             let bigscatterplotG = d3.select("#bigscatterplotGroup");
             appendRect(bigscatterplotG,0,y+15,x+130,0,svg2Color);
+            
+            // let descriptiveText = `The two behaviors show ${corrIntensity} correlation between them (r=${corr.toFixed(3)})`;
+            // appendText(bigscatterplotG,-40,60,
+                // descriptiveText,font2,colorPlot);
+            let textElem = bigscatterplotG.append("text")
+                .text("The two behaviors have ")    
+                .attr("x", -40)
+                .attr("y", 60)
+                .attr("fill", colorPlot)
+                .style("font", font2);
+                textElem.append("tspan").text(corrIntensity).attr("class", "computedText")
+                textElem.append("tspan").text(` correlation between them (r=${corr.toFixed(3)})`);
 
-            appendText(bigscatterplotG,x,60,
-                "Pearson Correlation r = "+corr.toFixed(6),font2,colorPlot);
             // appendText(svg2,x,55,
             //     "x-Axis: Number of displayed behavior '"+labelNames[metric1]+"'",font3,colorPlot);
-            appendText(bigscatterplotG,x + plotWidth/2,y+30,
-                "# "+labelNames[metric1]+"",font3,colorPlot,'',"axislabel scatterplotlabel");
-            let ylabelx = x-30;
-            let ylabely = svg2Height+50;
+            appendText(bigscatterplotG,x + plotWidth/2,y+40,
+                "# "+labelNames[metric1]+"",font2,colorPlot,'',"axislabel scatterplotlabel");
+            let ylabelx = x-50;
+            let ylabely = svg2Height;
             appendText(bigscatterplotG,ylabelx,ylabely,
-                "# "+ labelNames[metric2]+"",font3,colorPlot, `rotate(-90 ${ylabelx} ${ylabely})`, "axislabel scatterplotlabel");
+                "# "+ labelNames[metric2]+"",font2,colorPlot, `rotate(-90 ${ylabelx} ${ylabely})`, "axislabel scatterplotlabel");
             // Draw y-Axis 
             let iY=0;
             let ySteps=2;
             for (iY in range(1,ySteps+1)){
                 // appendCircle(svg2,x,(y-(plotHeight/ySteps*iY)),colorPlot,circleSize);
                 appendTickMark(bigscatterplotG,x,(y-(plotHeight/ySteps*iY)),colorPlot, 0);
-                appendText(bigscatterplotG,(x-25),(y-(plotHeight/ySteps*iY)),(maxMetric2/ySteps*iY).toFixed(0),font1,colorPlot);
+                // appendText(bigscatterplotG,(x-30),(y-(plotHeight/ySteps*iY)),(maxMetric2/ySteps*iY).toFixed(0),font1,colorPlot);
+                bigscatterplotG.append("text")
+                .text((maxMetric2/ySteps*iY).toFixed(0))    
+                .attr("x", x-10)
+                .attr("y", (y-(plotHeight/ySteps*iY)))
+                .attr("fill", colorPlot)
+                .style("font", tickLabelSize)
+                .style("text-anchor","end")
+                .style("dominant-baseline", "central");
             }
             appendLine(bigscatterplotG,x,y,x,(y-plotHeight),colorPlot,axisLineThickness);
             // Draw x-Axis 
@@ -686,9 +729,17 @@
                 // appendCircle(svg2,x+(plotWidth/xSteps*iX),y,colorPlot,circleSize);
                 appendTickMark(bigscatterplotG,x+(plotWidth/xSteps*iX),y,colorPlot, -90);
 
-                appendText(bigscatterplotG,x+(plotWidth/xSteps*iX),(y+15),
-                    (maxMetric1/xSteps*iX).toFixed(0), 
-                    font1, colorPlot);
+                // appendText(bigscatterplotG,x+(plotWidth/xSteps*iX),(y+15),
+                    // (maxMetric1/xSteps*iX).toFixed(0), 
+                    // font1, colorPlot);
+                bigscatterplotG.append("text").text((maxMetric1/xSteps*iX).toFixed(0)) 
+                    .attr("x", x+(plotWidth/xSteps*iX))
+                    .attr("y", y+15)
+                    .attr("fill", colorPlot)
+                    .style("font", tickLabelSize)
+                    .style("text-anchor","middle")
+                    .style("dominant-baseline", "central")
+                    ;
             }
             appendLine(bigscatterplotG,x,y,x+plotWidth,y,colorPlot, axisLineThickness);
             // Draw Circles
@@ -697,20 +748,25 @@
                 iA=0;
                 for (a in cycle[c]){ //a = agents; cycle[c][a] = agent results (JSON)
                     iB=0;
+                    let xval = -1;
+                    let yval = -1;
                     for (b in cycle[c][a]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
                         if (iB==metric1){
                             x1=x+(plotWidth/maxMetric1)*cycle[c][a][b];
+                            xval = cycle[c][a][b];
                         }
                         if (iB==metric2){
                             y1=y-(plotHeight/maxMetric2)*cycle[c][a][b];
+                            yval = cycle[c][a][b];
                         }
                         iB++;
                     }
+                    let cycleNum = parseInt(c)+1;
                     if (iA==0||iA==2){
-                        appendCircle(bigscatterplotG,x1,y1,colorAgent1,circleSize, "teamA scatterplotCircle cycle"+c);
+                        appendCircleOnHover(bigscatterplotG,x1,y1,colorAgent1,circleSize, `x: ${xval}, y: ${yval}` ,"teamA scatterplotCircle cycle"+cycleNum);
                     }
                     if (iA==1||iA==3){
-                        appendCircle(bigscatterplotG,x1,y1,colorAgent2,circleSize, "teamB scatterplotCircle cycle"+c);
+                        appendCircleOnHover(bigscatterplotG,x1,y1,colorAgent2,circleSize, `x: ${xval}, y: ${yval}` ,"teamB scatterplotCircle cycle"+cycleNum);
                     }
                     iA++;          
                 }
@@ -735,7 +791,11 @@
                 for (l2 in labelNames){
                     x1=x+(xStep*iL2);
                     if(iL1==iL2){
-                        appendText(svg2,x1 + svg2Height/20 ,y1-svg2Height/40,labelNames[l1],font1,"black", '', 'splomaxislabel')
+                        let t_x = x1 + svg2Height/17;
+                        let t_y = y1-svg2Height/40;
+                        if(labelNames[l1] == "Bombs")
+                            t_y = y1-svg2Height/60;
+                        appendText(svg2,t_x ,t_y,labelNames[l1],font1,"black", `rotate(0 ${t_x} ${t_y})`, 'splomaxislabel')
                     }
                     if(iL1!=iL2 && iL1<iL2){
                         appendScatterplot(cycle,x1,y1,iL2,iL1);
@@ -819,61 +879,23 @@
 
             div1.selectAll("*").remove();
 
-            // if(metric==0 || metric==1 || metric==2){
-                div1.append("text").html(
-                    // "<p>The visualization above shows the competitive evolution between two teams of AI agents in the game 'Pommerman'. "
-                    // +"The 1st team consists out of two identical NN agents and the 2nd team consists out of two identical versions of the docker agent 'HakozakiJunctions'. "
-                    // +"The line chart shows the number of times team members engaged in a specific behavior (y-axis) over "+(endCycle-startCycle+1)+" interval(s) (y-axis). "
-                    // +"At each interval, the NN agents trained for "+numberOfTrainings+" battles, before they competed for "+numberOfBattles+" battles. "
-                    // +"</p>"
-                    // +
-                    // "<p>The Selected behavior '"+maxCorr[metric][1]+"' is selected, which is defined as the '"+behaviorDefinitions[metric]+"'. "
-                    // +"The current selection shows "+numberOfBattles*(endCycle-startCycle+1)
-                    // +" battles during which that behavior was displayed by the NN team "+sumAgentN.toFixed(1)+" times in total and "+avgAgentN.toFixed(1)+" times on average, "
-                    // +"and by the opposing team "+sumAgentH.toFixed(1)+" times in total and "+avgAgentH.toFixed(1)+" times on average. "
-                    // +"</p>"
-                        
-                    `<p><span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
-                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon" title="${behaviorDefinitions[metric]}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
-                    The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon" title="${behaviorDefinitions[parseInt(maxCorr[metric][2])]}">ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).
-                    </p>`
-                    
-                    // +"<p>Over the selected intervals, the behavior '"+maxCorr[metric][1]
-                    // +"' has a slope of "+slopeSolo(stepsAgentN,m[metric]).toFixed(2)+" for the NN team "
-                    // +"and a slope of "+slopeSolo(stepsAgentH,m[metric]).toFixed(2)+" for opposing team (calculated by linear regression). "
-                    // +"The behavior '"+maxCorr[metric][1]+"' shows the highest pearson-correlation r with the behavior '"+maxCorr[metric][3]
-                    // +"' with r = "+maxCorr[metric][4].toFixed(6)+". (Not regarding correlations between 'win', 'loss', and 'tie'.) "
-                    // +"</p>"
+            let corrWithWin = computeCorrelation(0,metric);
+            let corrIntensity = computeCorrelationIntensityText(corrWithWin);
+           
 
-                    )
+            let appendedText =  `<span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
+                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon" title="${behaviorDefinitions[metric]}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
+                    The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon" title="${behaviorDefinitions[parseInt(maxCorr[metric][2])]}">ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
+            let extraText = "";
+            if(metric > 2)
+            {
+                extraText = ` The selected behavior <span class="dynamicText">${maxCorr[metric][1]}</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span> <span class="infoIcon" title="${behaviorDefinitions[0]}">ⓘ</span> behavior.`;
+            }
+                div1.append("text").html(`<p>${appendedText}${extraText}</p>`)
                 .style("font-size",divFontSize)
                 .style("font-style",divFontStyle)
                 .style("color",divFontColor)
-            // }
-            // else {
-            //     div1.append("text").html(
-            //         "<p>The visualization above shows the competitive evolution between two teams of AI agents in the game 'Pommerman'. "
-            //         +"The 1st team consists out of two identical NN agents and the 2nd team consists out of two identical versions of the docker agent 'HakozakiJunctions'. "
-            //         +"The line chart shows the number of times team members engaged in a specific behavior (y-axis) over "+(endCycle-startCycle+1)+" interval(s) (y-axis). "
-            //         +"At each interval, the NN agents trained for "+numberOfTrainings+" battles, before they competed for "+numberOfBattles+" battles. "
-            //         +"</p>"
-                    
-            //         +"<p>Currently, the behavior '"+maxCorr[metric][1]+"' is selected, which is defined as the '"+behaviorDefinitions[metric]+"'. "
-            //         +"The current selection shows "+numberOfBattles*(endCycle-startCycle+1)
-            //         +" battles during which that behavior was displayed by the NN team "+sumTeamN.toFixed(1)+" times in total and "+avgTeamN.toFixed(1)+" times on average, "
-            //         +"and by the opposing team "+sumTeamH.toFixed(1)+" times in total and "+avgTeamH.toFixed(1)+" times on average. "
-            //         + "</p>"
-            //         +"<p>Over the selected intervals, the behavior '"+maxCorr[metric][1]
-            //         +"' has a slope of "+slopeTeam(stepsTeamN,m[metric]).toFixed(2)+" for the NN team "
-            //         +"and a slope of "+slopeTeam(stepsTeamH,m[metric]).toFixed(2)+" for opposing team (calculated by linear regression). "
-            //         +"The behavior '"+maxCorr[metric][1]+"' shows the highest pearson-correlation r with the behavior '"+maxCorr[metric][3]
-            //         +"' with r = "+maxCorr[metric][4].toFixed(6)+"."
-            //         + "</p>")
 
-            //     .style("font-size",divFontSize)
-            //     .style("font-style",divFontStyle)
-            //     .style("color",divFontColor)
-            // }
         }
         function roundOff(val)
         {
@@ -1074,7 +1096,7 @@
             let x1_agent2=x, x2_agent2=x, y1_agent2=y, y2_agent2=y;
             let colorCnb = colorChart;
             let colorCnt = "grey";
-            let circleSize=3;
+            let circleSize=5;
             let chartHeight=lineChartHeight;
             let chartWidth=lineChartWidth;
             let headerTeamNameXpos = x+130;
@@ -1124,10 +1146,10 @@
                 if (iX>=1){
                     appendText(svg1,(x+(chartWidth/cycle_results.length*iX)+2),(y+20),
                         numberOfBattles*iX, 
-                        font1, colorCnb);
+                        tickLabelSize, colorCnb);
                     appendText(svg1,(x+(chartWidth/cycle_results.length*iX)-2),(y+40),
                         numberOfTrainings*iX, 
-                        font1, colorCnb,'','trainingEpochLabel');
+                        tickLabelSize, colorCnb,'','trainingEpochLabel');
                 }
             }
             appendLine(svg1,x,y,(x+chartWidth),y,colorChart,axisLineThickness);
@@ -1141,7 +1163,7 @@
                 // appendCircle(svg1,x,(y-(chartHeight/ySteps*iY)),colorChart,circleSize);
                 console.log(tick, y-yscaleTicks(tick), incrementValue, maxMetricVal);
                 appendTickMark(svg1,x,(y-chartHeight/maxMetricVal*tick),colorChart,0);
-                appendText(svg1,(x-30),(y-chartHeight/maxMetricVal*tick), (tick), font1, colorChart);
+                appendText(svg1,(x-30),(y-chartHeight/maxMetricVal*tick), (tick), tickLabelSize, colorChart);
                 tick = tick + incrementValue;
             }
             appendLine(svg1,x,y,x,(y-chartHeight),colorChart,axisLineThickness);
@@ -1161,7 +1183,7 @@
                                         if (iCC>0){ //change to >=0 if line for epoche_0 should be drawn
                                             appendLine(svg1,x1_agent1,y1_agent1,x2_agent1,y2_agent1,colorAgent1,circleSize);
                                         }
-                                        appendCircleOnHover(svg1,x2_agent1,y2_agent1,colorAgent1,circleSize,cycle[cc][aa][bb]);
+                                        appendCircleOnHover(svg1,x2_agent1,y2_agent1,colorAgent1,circleSize,cycle[cc][aa][bb], maxMetric0_2);
                                         x1_agent1=x2_agent1;
                                         y1_agent1=y2_agent1;
                                         break;
@@ -1177,7 +1199,7 @@
                                         if (iCC>0){ //change to >=0 if line for epoche_0 should be drawn
                                             appendLine(svg1,x1_agent2,y1_agent2,x2_agent2,y2_agent2,colorAgent2,circleSize);
                                         }
-                                        appendCircleOnHover(svg1,x2_agent2,y2_agent2,colorAgent2,circleSize,cycle[cc][aa][bb]);
+                                        appendCircleOnHover(svg1,x2_agent2,y2_agent2,colorAgent2,circleSize,cycle[cc][aa][bb], maxMetric0_2);
                                         x1_agent2=x2_agent2;
                                         y1_agent2=y2_agent2;
                                         break;
@@ -1257,7 +1279,7 @@
             }
 
             svg1.attr("transform", "translate(5 -80)");
-            enableBrushing();
+            // enableBrushing();
     }
 
         function appendLineChartUpdate(cycle,x,y,metric,startCycle,endCycle)
@@ -1309,17 +1331,20 @@
                 .style("fill", color);
         }
 
-        function appendCircleOnHover(svg,cx,cy,color,r,value){
+        function appendCircleOnHover(svg,cx,cy,color,r,value, circleclass){
             svg.append("circle")
                 .attr("cx", cx)
                 .attr("cy", cy)
                 .attr("r", r)
                 .attr("fill", color)
-                .attr("pointer-events", "all")
-                .attr("title", value)
-                .on("mouseover", function onMouseOver() {
-                    appendTextOnHover(svg1,(xRoot+20),cy,value,"8px times",color);
-                });
+                .attr("cursor", "pointer")
+                .attr("class", circleclass)
+                .append("title").text(value)
+                // .attr("title", value)
+                // .on("mouseover", function onMouseOver() {
+                //     appendTextOnHover(svg1,(xRoot+20),cy,value,"8px times",color);
+                // })
+                ;
         }
 
 
@@ -1676,13 +1701,13 @@
     </script>
 
 <script>
-    function zoomPage(){
-            d3.select("#select2").style("display", "none");
-            d3.select("#select3").style("display", "none");
-            var screenWidth = document.body.clientWidth;
-            window.zoomFactor = screenWidth/1920;
-            d3.select("body").style("zoom", window.zoomFactor);
-    }
+    // function zoomPage(){
+    //         d3.select("#select2").style("display", "none");
+    //         d3.select("#select3").style("display", "none");
+    //         var screenWidth = document.body.clientWidth;
+    //         window.zoomFactor = screenWidth/1920;
+    //         d3.select("body").style("zoom", window.zoomFactor);
+    // }
     //  $(window).resize(function() {
     //         zoomPage();
     //     });

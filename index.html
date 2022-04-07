@@ -3,6 +3,14 @@
 <head>
     <meta charset="utf-8">
     <title style="color:rgb(0, 0, 0)">Visualizing the competetive evolution of game playing AI</title>
+    <script src="d3.min.js"></script>
+    <script src="jquery.min.js"></script>
+    <script type="text/javascript" src="jquery-ui.js"></script>
+    <script type="text/javascript" src="parcoords.js"></script>
+    <script type="text/javascript" src="data.js"></script>
+    <link rel="stylesheet" href="parcoords.css" type='text/css' media='all'>
+    <link rel="stylesheet" href="jquery-ui.css" type='text/css' media='all'>
+
     <style> 
         body
         {
@@ -118,17 +126,12 @@
         }
 
     </style>
-    <!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
-    <script src="d3.min.js"></script>
-    <script src="jquery.min.js"></script>
-    <script type="text/javascript" src="parcoords.js"></script>
-    <script type="text/javascript" src="data.js"></script>
-    <link rel="stylesheet" href="parcoords.css" type='text/css' media='all'>
+
 </head>
 
 
 <body>
-    <h2 style="text-align: center; margin: auto">Visualizing Evolution of Multi-agent Game-playing Behaviors</h2>
+    <h3 style="text-align: center; margin: auto">Visualizing Evolution of Multi-agent Game-playing Behaviors</h3>
     <p style="text-align: center; margin: auto">Training <span class="teamA">Neural Network</span> team (two agents) to play against <span class="teamB">Hakozaki Junctions</span> (fully trained) in the <a href="https://www.pommerman.com/" target="_blank">Pommerman</a> Game Environment</p>
     <!-- Use subtitle -->
 
@@ -206,6 +209,25 @@
             "slack_king": "Idle Spans",
             "bomb_layer": "Bombs"
         };
+        let bindex_id = {
+             0: "win",
+             1: "loss",
+             2: "tie",
+             3: "self_kicker",
+             4: "kick_frenzy",
+             5: "item_fan",
+             6: "item_friend",
+             7: "chain_killer",
+             8: "chain_victim",
+             9: "kick_thief",
+             10: "item_thief",
+             11: "hara_kiri",
+             12: "friendly_fire",
+             13: "chain_fan",
+             14: "slack_king",
+             15: "bomb_layer"
+        };
+        
         // neutral, competitive, collaborative
         let labelid_Category = {
             "Epochs": "neutral",
@@ -883,18 +905,31 @@
             let corrIntensity = computeCorrelationIntensityText(corrWithWin);
            
 
-            let appendedText =  `<span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
-                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon" title="${behaviorDefinitions[metric]}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
-                    The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon" title="${behaviorDefinitions[parseInt(maxCorr[metric][2])]}">ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
+            let appendedText =  `<span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText '>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}" bindex=${metric}>ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
+                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" bindex=${parseInt(metric[0])}}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
+                    The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon behavior" bindex=${parseInt(maxCorr[metric][2])}>ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
             let extraText = "";
             if(metric > 2)
             {
-                extraText = ` The selected behavior <span class="dynamicText">${maxCorr[metric][1]}</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span> <span class="infoIcon" title="${behaviorDefinitions[0]}">ⓘ</span> behavior.`;
+                extraText = ` The selected behavior <span class="dynamicText">${maxCorr[metric][1]}</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span> <span class="infoIcon behavior" bindex=0>ⓘ</span> behavior.`;
             }
                 div1.append("text").html(`<p>${appendedText}${extraText}</p>`)
                 .style("font-size",divFontSize)
                 .style("font-style",divFontStyle)
                 .style("color",divFontColor)
+                
+            
+            // .on('mouseout', '.className', function () {
+            //     var className = getClassNameFromClassSpan(this);
+            //     if (haveClassToPersist) {
+            //     c(className);
+            //     }
+            //     else {
+            //     removePersistentHighlighting(className);
+            //     removeHoverHighlighting(className);
+            //     }
+            // })
+            ;
 
         }
         function roundOff(val)
@@ -1112,7 +1147,8 @@
             // Draw Header Description
             let svg1 = d3.select("#bigLineChartGroup");
             // appendRect(svg1,headerTeamNameXpos,(y-10-chartHeight),headerTeamNameXpos+10,(y-10-chartHeight)-10,colorAgent2);
-            // appendText(svg1,headerTeamNameXpos+15,(y-10-chartHeight),"Team 1: Neural Network (NN)",font2,colorChart);
+            
+           
             // appendRect(svg1,(x+chartWidth*0.5),(y-10-chartHeight),(x+chartWidth*0.5)+10,(y-10-chartHeight)-10,colorAgent1);
             // appendText(svg1,(x+chartWidth*0.5)+15,(y-10-chartHeight),"Team 2: Hakozaki-Junctions",font2,colorChart);
             // appendText(svg1,x+chartWidth/2,(y+60),
@@ -1278,8 +1314,100 @@
                 }
             }
 
+            // draw Agent's lines
+            agentLineChartGroup = svg1.append("g").attr("class", "agentLineChart");
+            x1_agent = x;
+            y1_agent = y;
+            let headerypos = (y-chartHeight-20);
+            
+            let agents = ["1hakozaki", "2hakozaki", "1ppo", "2ppo"];
+            for(let a in agents)
+            {   
+                let agent = agents[a];
+                let xpos = headerTeamNameXpos + parseInt(a)*220;
+                if(metric>2)
+                {
+                    svg1.append("line")
+                        .attr("x1", xpos)
+                        .attr("y1", headerypos)
+                        .attr("x2", xpos+30)
+                        .attr("y2", headerypos)
+                        .style("stroke-width", 1)
+                        .style("stroke", colorAgent(agent))
+                        .style("stroke-dasharray", agentLineStroke(agent))
+
+                    // appendText(svg1,xpos+45,headerypos,agentName(agent),font2,colorAgent(agent));
+                    svg1.append("text")
+                        .text(agentName(agent))    
+                        .attr("x", xpos+45)
+                        .attr("y", headerypos)
+                        .attr("fill", colorAgent(agent))
+                        .style("font", font2)
+                        .style("dominant-baseline", "central")
+                }
+
+                for(let i in cycle)
+                {
+                    let cc = parseInt(i);
+                    
+                    if(metric>2)
+                    {
+                        let metricVal = cycle[cc][agent][bindex_id[metric]];
+                        x2_agent=(x+(chartWidth/cycle_results.length*(cc+1)));
+                        y2_agent=(y-(chartHeight/maxMetric3_15*metricVal))
+                        if(parseInt(cc)>=1)
+                        {
+                            // appendLine(agentLineChartGroup,x1_agent,y1_agent,x2_agent,y2_agent,colorAgent(agent),1);
+                            agentLineChartGroup.append("line")
+                                .style("stroke", colorAgent(agent))
+                                .style("opacity", 0.7)
+                                .style("stroke-width", 1)
+                                .style("stroke-dasharray", function(){
+                                    return agentLineStroke(agent);
+                                })
+                                .attr("x1", x1_agent)
+                                .attr("y1", y1_agent)
+                                .attr("x2", x2_agent)
+                                .attr("y2", y2_agent);
+                                
+                        }
+                        appendCircleOnHover(agentLineChartGroup,x2_agent,y2_agent,colorAgent(agent),2,metricVal);
+                        x1_agent=x2_agent;
+                        y1_agent=y2_agent;
+
+                    }
+                }
+            }
+
             svg1.attr("transform", "translate(5 -80)");
             // enableBrushing();
+    }
+
+    function agentName(agent)
+    {
+        if( agent == "1hakozaki" || agent == "1ppo")
+            return "Agent 1";
+        else if( agent == "2hakozaki" || agent == "2ppo")
+            return "Agent 2";
+    }
+
+    function colorAgent(agent)
+    {
+        if(agent == "1hakozaki" || agent == "2hakozaki")
+            return colorAgent1;
+        else if (agent == "1ppo" || agent == "2ppo")
+            return colorAgent2;
+
+        else
+            return "black";
+    }
+
+    function agentLineStroke(agent)
+    {
+        if(agent == "2hakozaki" || agent == "2ppo")
+            return "5,5";
+        else
+            return "5,0";
     }
 
         function appendLineChartUpdate(cycle,x,y,metric,startCycle,endCycle)
@@ -1744,13 +1872,20 @@
             //     temp_data_pont[behavid] = val;
 
             // }
-            console.log(temp_data_pont);
+            // console.log(temp_data_pont);
             rev_data.push(temp_data_pont);
 
         }   
     }
 
     parallelplot(rev_data);
+
+    $(".behavior").on("mouseover", function () {
+    var bindex = $(this).attr("bindex");
+    $(this).tooltip({
+        content: behaviorDefinitions[parseInt(bindex)]
+    });
+})
 //    zoomPage();
 }
 

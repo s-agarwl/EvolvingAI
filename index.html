@@ -42,9 +42,9 @@
         .grid-container {
             display: grid;
             /* padding: 25px; */
-            grid-template-rows: 220px auto;
+            grid-template-rows: 20fr 80fr;
             grid-template-columns: 50fr 50fr;
-            grid-gap: 10px;
+            grid-gap: 5px;
             height: 100vh;
             background-color: #e8e8e8;
             padding: 10px;
@@ -177,8 +177,8 @@
             <div id="parallelplot" class="parcoords" ></div>
         <!-- </div> -->
         <!-- <div class="grid-container2"> -->
-        <div>
-            <div class="grid-container4" id="lineCharts">
+        <div >
+            <div class="grid-container4" id="lineCharts" >
                 <div id="lineChartSmallDiv" class="grid-container3">
 
                 </div>
@@ -191,8 +191,8 @@
             </div>
             
         </div>
-        <div>
-            <svg id="svg2">
+        <div id="scatterPlotDiv">
+            <svg id="svg2" >
                 <g id="bigscatterplotGroup">
                 </g>
             </svg>
@@ -540,19 +540,28 @@
         // let font3 = "18px system-ui";
         // let tickLabelSize =  "14px system-ui"; 
 
-        let font1 = "22px system-ui";  //tick labels
-        let font2 = "24px system-ui";
-        let font3 = "22px system-ui";
+        let font1 = "18px system-ui";  //tick labels
+        let font2 = "20px system-ui";
+        let font3 = "18px system-ui";
         let tickLabelSize =  "14px system-ui"; 
-        let parcoordsAxisLabel =  "14px"; 
+        let parcoordsAxisLabel =  "12px"; 
 
         if (window.screen.width<=1920)
         {
-            font1 = "14px system-ui";  //tick labels
-            font2 = "16px system-ui";
-            font3 = "14px system-ui";
+            font1 = "12px system-ui";  //tick labels
+            font2 = "14px system-ui";
+            font3 = "12px system-ui";
             tickLabelSize =  "10px system-ui"; 
-            parcoordsAxisLabel =  "11px"; 
+            parcoordsAxisLabel =  "9px"; 
+        }
+
+        if (window.screen.width<=1200)
+        {
+            font1 = "8px system-ui";  //tick labels
+            font2 = "10px system-ui";
+            font3 = "8px system-ui";
+            tickLabelSize =  "6px system-ui"; 
+            parcoordsAxisLabel =  "5px"; 
         }
 
         let divFontStyle="";
@@ -575,7 +584,7 @@
         let lineChartWidth=svg1Width-90;
 
         let svg2Width=width*0.5;
-        let svg2Height=height*0.7;
+        let svg2Height=document.getElementById("scatterPlotDiv").offsetHeight;;
         let svg2MarginTop=selectHeight+"px";
         let svg2MarginLeft=svg1Width+"px";
 
@@ -590,6 +599,8 @@
         let selectedMetricsForScatterPlot = [14,0];
 
         let smallVisAxisColor = "grey";
+
+        let scatterplotScaleRatio = 20.1;
 
         d3.select("body").style("font-size", font2);
         
@@ -658,28 +669,28 @@
             .attr("height",svg2Height)
             // .style("position","absolute")    
             // .style("margin-left",svg2MarginLeft)
-            .style("margin-top",svg2MarginTop)
+            // .style("margin-top",svg2MarginTop)
             .style('background-color',svg2Color);
 
         // Draw the Linechart
         let startCycle=1, endCycle=cycle_results.length;
         let xRoot=50;
         let yRoot=svg1Height;
-        let metric=0;
+        let metricForLineChart=14;
         let numberOfBattles=50;
         let numberOfTrainings=1000;
-        appendLineChart(cycle_results,xRoot,yRoot,metric);
+        appendLineChart(cycle_results,xRoot,yRoot,metricForLineChart);
         appendLineChartSmall(cycle_results);
 
 
 
         // Write the Analysis
-        analysis(cycle_results,metric,startCycle,endCycle);
+        analysis(cycle_results,metricForLineChart,startCycle,endCycle);
 
         // Draw the Scatterplot Matrix
         let agent=0;
-        let xRoot2=5;
-        let yRoot2=svg2Height-120;
+        let xRoot2=0;
+        let yRoot2=svg2Height;
         appendScatterplotMatrix(cycle_results,xRoot2,yRoot2);
 
         // Fill select1 with the behavior labels
@@ -709,7 +720,7 @@
                 .attr("selected",true);
 
         // Update svg1 and div1 when using select1
-        let selectedOption = 0;
+        let selectedOption = metricForLineChart;
         d3.select("#select1").on("change", function(d){
             d3.select("#bigLineChartGroup").selectAll("*").remove();    
             div1.selectAll("*").remove();
@@ -834,7 +845,7 @@
             let textElem = bigscatterplotG.append("text")
                 .text("The two behaviors have ")    
                 .attr("x", 0)
-                .attr("y", 60)
+                .attr("y", 80)
                 .attr("fill", colorPlot)
                 .style("font", font2);
                 textElem.append("tspan").text(corrIntensity).attr("class", "computedText")
@@ -905,7 +916,7 @@
 
             }
 
-            bigscatterplotG.attr("transform","translate(30 -20)");
+            bigscatterplotG.attr("transform","translate(20 -60)");
             highlightSelectedScatterPlot(metric1, metric2);
             highlightScatterPlotCircles(startCycle, endCycle);
         }
@@ -913,25 +924,26 @@
         function appendScatterplotMatrix(cycle,x,y){
             let x1=x;
             let y1=y;
-            let scatterplotWidth=svg2Width*0.9;
-            let scatterplotHeight=svg2Height*0.9;
-            let xStep=scatterplotWidth/16;
-            let yStep=scatterplotHeight/16;
+            let scatterplotWidth=svg2Width/scatterplotScaleRatio;
+            let scatterplotHeight=svg2Height/scatterplotScaleRatio;
+            let xStep=scatterplotWidth;
+            let yStep=scatterplotHeight;
             let iL1=0;
+            let splomGroup = svg2.append("g");
             for (l1 in labelNames){
                 y1=y-(yStep*iL1);
                 let iL2=0;
                 for (l2 in labelNames){
                     x1=x+(xStep*iL2);
                     if(iL1==iL2){
-                        let t_x = x1 + svg2Height/17;
-                        let t_y = y1-svg2Height/40;
+                        let t_x = x1 + scatterplotWidth - 5 ;
+                        let t_y = y1-scatterplotHeight/2 ;
                         if(labelNames[l1] == "Bombs")
                             t_y = y1-svg2Height/60;
-                        appendText(svg2,t_x ,t_y,labelNames[l1],font1,"black", `rotate(0 ${t_x} ${t_y})`, 'splomaxislabel')
+                        appendText(splomGroup,t_x ,t_y,labelNames[l1],font1,"black", `rotate(0 ${t_x} ${t_y})`, 'splomaxislabel')
                     }
                     if(iL1!=iL2 && iL1<iL2){
-                        appendScatterplot(cycle,x1,y1,iL2,iL1);
+                        appendScatterplot(splomGroup, cycle,x1,y1,iL2,iL1);
                     }
                     iL2++;
                 }
@@ -939,8 +951,10 @@
             }
         }
 
-        function appendScatterplot(cycle,x,y,metric1,metric2){
-            let plotWidth=svg2Width/20, plotHeight=svg2Height/20;
+        function appendScatterplot(svg2, cycle,x,y,metric1,metric2){
+            let splomPadding = 6;
+
+            let plotWidth=svg2Width/scatterplotScaleRatio - splomPadding, plotHeight=svg2Height/scatterplotScaleRatio - splomPadding;
             let colorPlot="gray";
             let circleSize=1;
             let lineSize="1px";
@@ -973,6 +987,7 @@
                 }
 
             }
+            svg2.attr("transform","translate(-15 -70)");
 
         }
 
@@ -1884,11 +1899,13 @@
     
     window.onload = function() 
 {
-    selectedMetricHighlight();
+    
 
     parallelplot(rev_data);
 
     $(document).ready(function() {
+        selectedMetricHighlight();
+        d3.select("#svg1").attr("width",parseInt(d3.select("#svg1").attr("width"))+5);
             $('.infoIcon').tooltipster({
                 // theme: 'tooltipster-shadow',
                 theme: 'my-custom-theme'
@@ -1983,39 +2000,6 @@ function parallelplot(data) {
     .style("font-size", "14px");
 
     pcz.on("brush", function (d) {
-    // var sAxis = pcz.brushExtents();
-    // var sAxisName = Object.keys(sAxis);
-    // var content = 'The current selection is drawn in black <span class="boxBlack"></span> and contains ' + num2word(d.length) + ' class' + (d.length == 1 ? '' : 'es');
-    
-    // if (d.length == 1) {
-    //     content += ': ' + printList([createClassSpan(d[0].cname) + ' (' + generateShortMetricSpan(sAxisName) + ': '+d[0][sAxisName].toFixed()+')']);
-    // }
-    // else if (d.length == 2) {
-    //     content += ': ' + printList([createClassSpan(d[0].cname) + ' (' + generateShortMetricSpan(sAxisName) + ': '+d[0][sAxisName].toFixed()+')', createClassSpan(d[1].cname) + ' (' + generateShortMetricSpan(sAxisName) + ': '+d[1][sAxisName].toFixed()+')']);
-    // }
-    // else if (d.length == 3) {
-    //     content += ': ' + printList([createClassSpan(d[0].cname) + ' (' + generateShortMetricSpan(sAxisName) + ': '+d[0][sAxisName].toFixed()+')', createClassSpan(d[1].cname)+ ' (' + generateShortMetricSpan(sAxisName) + ': '+d[1][sAxisName].toFixed()+')', createClassSpan(d[2].cname) + ' (' + generateShortMetricSpan(sAxisName) + ': '+d[2][sAxisName].toFixed()+')']);
-    // }
-    // else if (d.length > 3 && sAxis[sAxisName] != undefined) {
-    //     content += '. The values of ' + generateShortMetricSpan(sAxisName)  + ' for this selection range between '+ sAxis[sAxisName][0].toFixed(2) + ' and '+sAxis[sAxisName][1].toFixed(2);
-    // }
-
-    // var newdata=Array(fullData.length).fill(false);
-    // d.forEach(function (d){
-    //     newdata[d.index]=true;
-    // });
-    // scatterfilter(newdata);
-    // updateCaption(content + '. <span class="pcpBrushInfo infoIcon" title="">ⓘ</span>'); 
-    // $(".pcpBrushInfo").tooltip({
-    //     content: 'To reset the manual brushing, click on the brushed axis anywhere outside the rectangle.'
-    // });
-
-    // //TODO: !!CRUCIAL!!!! not a neat solution, it's more like a hack at the moment
-    // if (d.length == 293 || d.length == 0) {
-    //     resetScatterplot();
-    //     updateCaption('');
-    // }
-    // haveClassToPersist = true;
     });
 }
 

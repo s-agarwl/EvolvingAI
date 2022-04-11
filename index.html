@@ -115,6 +115,11 @@
             color: steelblue;
             font-weight:700;
         }
+        .linechart{
+            opacity: 0.9;
+            stroke-opacity: 0.9;
+            fill-opacity: 0.9;
+        }
         .dynamicText{
             font-weight:700;
         }
@@ -163,7 +168,7 @@
     </div>
 
     <h3 style="text-align: center; margin: auto">Visualizing Evolution of Multi-agent Game-playing Behaviors</h3>
-    <p style="text-align: center; margin: auto">Training <span class="teamA">Neural Network</span> <span id="NNInfo">ⓘ</span> team (two agents) to play against <span class="teamB">Hakozaki Junctions</span> <span id="hakozakiInfo">ⓘ</span> (fully trained) in the <a href="https://www.pommerman.com/" target="_blank">Pommerman</a>  Game Environment <span id="pommermanInfo" class="" data-tooltip-content="#pommermanDetails">ⓘ</span></p>
+    <p style="text-align: center; margin: auto">Training <span class="teamA">Skynet955</span> <span id="NNInfo">ⓘ</span> team (two agents) to play against <span class="teamB">Hakozaki Junctions</span> <span id="hakozakiInfo">ⓘ</span> (fully trained) in the <a href="https://www.pommerman.com/" target="_blank">Pommerman</a>  Game Environment <span id="pommermanInfo" class="" data-tooltip-content="#pommermanDetails">ⓘ</span></p>
     <!-- Use subtitle -->
 
     
@@ -450,7 +455,61 @@
         // }
 
 
+            function computeRelativeFrequencyText(sumTeamN, sumTeamH)
+            {
+                let min = sumTeamN;
+                let max = sumTeamH;
+                let maxTeam = "Hakozaki Junctions";
+                let team = "teamB";
+                if(sumTeamH<sumTeamN)
+                {
+                     min = sumTeamH;
+                     max = sumTeamN;
+                     maxTeam = "Skynet955";
+                     team = "teamA";
+                }
+                let nRatio = Math.round(max/min);
+                // return {nRatio, maxTeam, team};
+                if(nRatio == 1)
+                return `almost same number of times by both teams. `;
+                else
+                return `almost <span class='dynamicText'>${nRatio}</span> times more by <span class='${team}'>${maxTeam}</span>. `;
 
+            }
+        
+        function aggregateBehaviorCount(obj1, obj2)
+        {
+            let aggregatedObj = {};
+            let teamStats = ["win", "tie", "loss"];
+            for(const [behavior, count] of Object.entries(obj1))
+            {
+                if(teamStats.indexOf(behavior)>=0)
+                {
+                    aggregatedObj[behavior] = obj1[behavior];
+
+                }
+                else
+                aggregatedObj[behavior] = obj1[behavior] + obj2[behavior];
+            }
+            return aggregatedObj;
+
+        }
+
+        let rev_data = [];
+        for (const [epochid, value] of Object.entries(cycle_results)) 
+        {
+                let epochVal = (parseInt(epochid)+1)*1000;
+
+                let hakozaki = aggregateBehaviorCount(value["1hakozaki"], value["2hakozaki"] );
+                let ppo = aggregateBehaviorCount(value["1ppo"], value["2ppo"] );
+
+                // console.log(hakozaki, ppo);
+
+                rev_data.push({"Epochs": +(epochVal), "teamId":2, ...hakozaki});
+                rev_data.push({"Epochs": +(epochVal), "teamId":1, ...ppo});  
+        }
+        window.aggregatedData = rev_data;
+        
 
 
         // ########## VIS ##########
@@ -528,7 +587,7 @@
 
         let axisLineThickness = "1px";
 
-        let selectedMetricsForScatterPlot = [6,5];
+        let selectedMetricsForScatterPlot = [14,0];
 
         let smallVisAxisColor = "grey";
 
@@ -716,8 +775,8 @@
 
         function computeCorrelation(metric1, metric2)
         {
-            let maxMetric1=roundOff(m[metric1].reduce(function(a,b){return Math.max(a,b);}));
-            let maxMetric2=roundOff(m[metric2].reduce(function(a,b){return Math.max(a,b);}));
+            let maxMetric1=(m[metric1].reduce(function(a,b){return Math.max(a,b);}));
+            let maxMetric2=(m[metric2].reduce(function(a,b){return Math.max(a,b);}));
             let iC=0, iA=0, iB=0;
             let data = new Array(m[metric1],m[metric2]);
             let corr = pearsonCorrelation(data,0,1);
@@ -739,17 +798,28 @@
             return corrIntensity;
         }
 
-
+        function maxMetricCount(obj, behaviorid)
+        {
+            let max = -1;
+            for(var i=0; i< obj.length; i++)
+            {
+                let count = obj[i][behaviorid];
+                if(count > max)
+                    max = count;
+            }
+            return max;
+        }
         // ########## FUNCTIONS ##########
         function appendScatterplotUpdate(cycle,x,y,metric1,metric2){
             d3.select("#bigscatterplotGroup").selectAll("*").remove();
             
             let plotWidth=300, plotHeight=svg2Height=200;
             let colorPlot="black";
-            let circleSize=3;
+            let circleSize=5;
             let x1=x, x2=x, y1=y, y2=y;
-            let maxMetric1=roundOff(m[metric1].reduce(function(a,b){return Math.max(a,b);}));
-            let maxMetric2=roundOff(m[metric2].reduce(function(a,b){return Math.max(a,b);}));
+            let maxMetric1 = roundOffCustom(maxMetricCount(window.aggregatedData, bindex_id[metric1]));
+            let maxMetric2 = roundOffCustom(maxMetricCount(window.aggregatedData, bindex_id[metric2]));
+
             let iC=0, iA=0, iB=0;
             // let data = new Array(m[metric1],m[metric2]);
             let corr = computeCorrelation(metric1, metric2);
@@ -816,36 +886,26 @@
             }
             appendLine(bigscatterplotG,x,y,x+plotWidth,y,colorPlot, axisLineThickness);
             // Draw Circles
-            iC=0;
-            for (c in cycle){ //c = cycles;
-                iA=0;
-                for (a in cycle[c]){ //a = agents; cycle[c][a] = agent results (JSON)
-                    iB=0;
-                    let xval = -1;
-                    let yval = -1;
-                    for (b in cycle[c][a]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                        if (iB==metric1){
-                            x1=x+(plotWidth/maxMetric1)*cycle[c][a][b];
-                            xval = cycle[c][a][b];
-                        }
-                        if (iB==metric2){
-                            y1=y-(plotHeight/maxMetric2)*cycle[c][a][b];
-                            yval = cycle[c][a][b];
-                        }
-                        iB++;
-                    }
-                    let cycleNum = parseInt(c)+1;
-                    if (iA==0||iA==2){
-                        appendCircleOnHover(bigscatterplotG,x1,y1,colorAgent1,circleSize, `x: ${xval}, y: ${yval}` ,"teamA scatterplotCircle cycle"+cycleNum);
-                    }
-                    if (iA==1||iA==3){
-                        appendCircleOnHover(bigscatterplotG,x1,y1,colorAgent2,circleSize, `x: ${xval}, y: ${yval}` ,"teamB scatterplotCircle cycle"+cycleNum);
-                    }
-                    iA++;          
+            for( var i=0; i<window.aggregatedData.length; i++)
+            {
+                let epochid = window.aggregatedData[i]["Epochs"]/1000;
+                let teamId = window.aggregatedData[i]["teamId"];
+                let xvalue = window.aggregatedData[i][bindex_id[metric1]];
+                let yvalue = window.aggregatedData[i][bindex_id[metric2]];
+
+                let x1=x+(plotWidth/maxMetric1)*xvalue;
+                let y1=y-(plotHeight/maxMetric2)*yvalue;
+
+                if (teamId == 2){
+                    appendCircleOnHover(bigscatterplotG,x1,y1,colorAgent1,circleSize, `x: ${xvalue}, y: ${yvalue}` ,"teamA scatterplotCircle cycle"+epochid);
                 }
-                iC++;
+                else if (teamId == 1){
+                    appendCircleOnHover(bigscatterplotG,x1,y1,colorAgent2,circleSize, `x: ${xvalue}, y: ${yvalue}` ,"teamB scatterplotCircle cycle"+epochid);
+                }
+
             }
-            bigscatterplotG.attr("transform","translate(20 -20)");
+
+            bigscatterplotG.attr("transform","translate(30 -20)");
             highlightSelectedScatterPlot(metric1, metric2);
             highlightScatterPlotCircles(startCycle, endCycle);
         }
@@ -885,9 +945,9 @@
             let circleSize=1;
             let lineSize="1px";
             let x1=x, x2=x, y1=y, y2=y;
-            let maxMetric1=m[metric1].reduce(function(a,b){return Math.max(a,b);});
-            let maxMetric2=m[metric2].reduce(function(a,b){return Math.max(a,b);});
-            let iC=0, iA=0, iB=0;
+            let maxMetric1 = maxMetricCount(window.aggregatedData, bindex_id[metric1]);
+            let maxMetric2 = maxMetricCount(window.aggregatedData, bindex_id[metric2]);
+
             // Draw Rect
             appendRectOnClickScatterplot(svg2,x,y,(x+plotWidth),(y-plotHeight),svg2Color2,metric1,metric2);
             // Draw y-Axis 
@@ -895,30 +955,25 @@
             // Draw x-Axis
             appendLine(svg2,x,y,(x+plotWidth),y,smallVisAxisColor,axisLineThickness);
             // Draw Circles
-            iC=0;
-            for (c in cycle){ //c = cycles;
-                iA=0;
-                for (a in cycle[c]){ //a = agents; cycle[c][a] = agent results (JSON)
-                    iB=0;
-                    for (b in cycle[c][a]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                        if (iB==metric1){
-                            x1=x+(plotWidth/maxMetric1)*cycle[c][a][b];
-                        }
-                        if (iB==metric2){
-                            y1=y-(plotHeight/maxMetric2)*cycle[c][a][b];
-                        }
-                        iB++;
-                    }
-                    if (iA==0||iA==2){
-                        appendCircle(svg2,x1,y1,colorAgent1,circleSize,"teamA scatterplotCircle cycle"+c);
-                    }
-                    if (iA==1||iA==3){
-                        appendCircle(svg2,x1,y1,colorAgent2,circleSize,"teamB scatterplotCircle cycle"+c);
-                    }
-                    iA++;          
+            for( var i=0; i<window.aggregatedData.length; i++)
+            {
+                let epochid = window.aggregatedData[i]["Epochs"]/1000;
+                let teamId = window.aggregatedData[i]["teamId"];
+                let xvalue = window.aggregatedData[i][bindex_id[metric1]];
+                let yvalue = window.aggregatedData[i][bindex_id[metric2]];
+
+                let x1=x+(plotWidth/maxMetric1)*xvalue;
+                let y1=y-(plotHeight/maxMetric2)*yvalue;
+
+                if (teamId == 2){
+                    appendCircleOnHover(svg2,x1,y1,colorAgent1,circleSize, `x: ${xvalue}, y: ${yvalue}` ,"teamA scatterplotCircle cycle"+epochid);
                 }
-                iC++;
+                else if (teamId == 1){
+                    appendCircleOnHover(svg2,x1,y1,colorAgent2,circleSize, `x: ${xvalue}, y: ${yvalue}` ,"teamB scatterplotCircle cycle"+epochid);
+                }
+
             }
+
         }
 
         function analysis(cycle,metric,startCycle,endCycle){
@@ -956,13 +1011,18 @@
             let corrIntensity = computeCorrelationIntensityText(corrWithWin);
            
 
-            let appendedText =  `<span class='teamA'>Neural Network</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText '>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
-                    In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Neural Network</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
+            // let appendedText =  `<span class='teamA'>Skynet955</span> vs <span class='teamB'>Hakozaki Junctions</span>: Line chart shows evolution of <span class='dynamicText '>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior (sampled from 50 battles at every 1000 training epochs). 
+                    // In 600 battles, the selected behavior <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> was exhibited <span class='dynamicText'>${sumTeamN.toFixed(0)}</span> times by <span class='teamA'>Skynet955</span> and <span class='dynamicText'>${sumTeamH.toFixed(0)}</span> times by <span class='teamB'>Hakozaki Junctions</span>. 
+                    // The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon behavior" title="${behaviorDefinitions[maxCorr[metric][2]]}">ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
+                    // The data is sampled from 50 battles between the two teams at every 1000 training epochs
+
+            let freqText = computeRelativeFrequencyText(sumTeamN, sumTeamH);
+            let appendedText =  `In 600 battles <span class="infoIcon" title="The data is sampled from 50 battles between the two teams at every 1000 training epochs">ⓘ</span>, overall, the <span class='dynamicText'>${maxCorr[metric][1]}</span> <span class="infoIcon behavior" title="${behaviorDefinitions[metric]}">ⓘ</span> behavior was exhibited ${freqText} 
                     The behavior shows the highest pearson-correlation with <span class="dynamicText">${maxCorr[metric][3]}</span> </span> <span class="infoIcon behavior" title="${behaviorDefinitions[maxCorr[metric][2]]}">ⓘ</span> behavior (r=${maxCorr[metric][4].toFixed(3)}).`;
             let extraText = "";
-            if(metric > 2)
+            if(metric > 2 && maxCorr[metric][2] != 0)
             {
-                extraText = ` The selected behavior <span class="dynamicText">${maxCorr[metric][1]}</span>  <span class="infoIcon behavior" title="${behaviorDefinitions[maxCorr[metric][0]]}">ⓘ</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span>  <span class="infoIcon behavior" title="${behaviorDefinitions[0]}">ⓘ</span> behavior.`;
+                extraText = ` <span class="dynamicText">${maxCorr[metric][1]}</span>  <span class="infoIcon behavior" title="${behaviorDefinitions[maxCorr[metric][0]]}">ⓘ</span> has <span class="computedText">${corrIntensity}</span> correlation (r=${corrWithWin.toFixed(3)}) with the <span class="dynamicText">Wins</span>  <span class="infoIcon behavior" title="${behaviorDefinitions[0]}">ⓘ</span> behavior.`;
             }
 
             div1.append("text").html(`<p>${appendedText}${extraText}</p>`)
@@ -975,10 +1035,13 @@
             });
 
         }
-        function roundOff(val)
+        function roundOffCustom(val)
         {
             let rem = val%5;
-            return (val + (5-rem));
+            if(rem >0)
+                return (val + (5-rem));
+            else
+                return val;
         }
 
         function appendLineChart(cycle,x,y,metric)
@@ -996,7 +1059,7 @@
         for(let metric=0; metric<labelNames.length; metric++)
         {
             let maxMetric0_2=m[metric].reduce(function(a,b){return Math.max(a,b);});
-            maxMetric0_2 = roundOff(maxMetric0_2);
+            maxMetric0_2 = roundOffCustom(maxMetric0_2);
             let maxMetric3_15=m[metric].reduce(function(a,b){return Math.max(a,b);})*2;
             let iCC=0, iAA=0, iBB=0;
             let colorChart="black";
@@ -1170,48 +1233,46 @@
             let maxMetric3_15=m[metric].reduce(function(a,b){return Math.max(a,b);})*2;
             let iCC=0, iAA=0, iBB=0;
             let colorChart="black";
-            let x1_agent1=x, x2_agent1=x, y1_agent1=y, y2_agent1=y;
-            let x1_agent2=x, x2_agent2=x, y1_agent2=y, y2_agent2=y;
+
+            let x1_agent = x;
+            let y1_agent = y;
             let colorCnb = colorChart;
             let colorCnt = "grey";
             let circleSize=5;
+            let lineWidth = 4;
             let chartHeight=lineChartHeight;
             let chartWidth=lineChartWidth;
             let headerTeamNameXpos = x+130;
             let startCycle = start;
             let endCycle = end;
             
-            let maxMetricVal = -1;
-            if(metric >=3) maxMetricVal = maxMetric3_15;
-            else maxMetricVal = maxMetric0_2;
+            // let maxMetricVal = -1;
+            // if(metric >=3) maxMetricVal = maxMetric3_15;
+            // else maxMetricVal = maxMetric0_2;
 
-            maxMetricVal = roundOff(maxMetricVal);
+            
+
+            let maxMetricVal = maxMetricCount(window.aggregatedData, bindex_id[metric]);
+            maxMetricVal = (maxMetricVal);
 
             // Draw Header Description
-            let svg1 = d3.select("#bigLineChartGroup");
-            // appendRect(svg1,headerTeamNameXpos,(y-10-chartHeight),headerTeamNameXpos+10,(y-10-chartHeight)-10,colorAgent2);
-            
-           
-            // appendRect(svg1,(x+chartWidth*0.5),(y-10-chartHeight),(x+chartWidth*0.5)+10,(y-10-chartHeight)-10,colorAgent1);
-            // appendText(svg1,(x+chartWidth*0.5)+15,(y-10-chartHeight),"Team 2: Hakozaki-Junctions",font2,colorChart);
-            // appendText(svg1,x+chartWidth/2,(y+60),
-            //     "Neural Network vs Hakozaki Junctions: Evolution of '' Behavior (Sampled from 50 battles at every 1000 training epochs)", 
-            //     font3, colorChart, '', "axislabel");
+            let svg1 = d3.select("#bigLineChartGroup").append("g");
             let ylabelx = x-40;
             let ylabely = chartHeight+80;
             appendText(svg1,ylabelx,ylabely,
                 "# " +labelNames[metric]+"", 
                 font3, colorChart, `rotate(-90 ${ylabelx} ${ylabely})`, "axislabel");
         // Draw x-Axis
-            appendText(svg1,(x-30),(y+20),"# Battles: ",font1,colorCnb);
-            appendText(svg1,(x-30),(y+40),"# Epochs: ",font1,colorCnb);
+            let xscale = d3.scale.linear().domain([0,cycle_results.length]).range([0,chartWidth]);
+            appendText(svg1,(x-30),(y+20),"#battles: ",tickLabelSize,colorCnb);
+            appendText(svg1,(x-30),(y+40),"#epochs: ",tickLabelSize,colorCnb);
             appendLine(svg1,(x-30),(y+25),(x+chartWidth+20),(y+25),"lightgray",1);
-            for (iX in range(start,end+1)){
-                // appendCircle(svg1,(x+(chartWidth/cycle_results.length*iX)),y,colorChart,circleSize);
 
-                appendTickMark(svg1,(x+(chartWidth/cycle_results.length*iX)),y,colorChart,-90);
+            for (iX in range(start,end+1))
+            {
+                let xpos = (x+xscale(iX));
+                appendTickMark(svg1,xpos,y,colorChart,-90);
 
-                let xpos = x+(chartWidth/cycle_results.length*iX);
                 if(iX>=1)
                     svg1.append("line")
                     .style("stroke", "lightgray")
@@ -1235,139 +1296,72 @@
         // Draw y-Axis 
             let tick=0;
             let ySteps=5;
-            let yscaleTicks = d3.scale.linear().domain([0, maxMetricVal]).range([0, chartHeight]);
-            let incrementValue = roundOff(maxMetricVal/ySteps);
+            let yscale = d3.scale.linear().domain([0, maxMetricVal]).range([0, chartHeight]);
+            let incrementValue = roundOffCustom(maxMetricVal/ySteps);
 
             while (tick <=maxMetricVal){
-                // appendCircle(svg1,x,(y-(chartHeight/ySteps*iY)),colorChart,circleSize);
-                console.log(tick, y-yscaleTicks(tick), incrementValue, maxMetricVal);
-                appendTickMark(svg1,x,(y-chartHeight/maxMetricVal*tick),colorChart,0);
-                appendText(svg1,(x-30),(y-chartHeight/maxMetricVal*tick), (tick), tickLabelSize, colorChart);
+                // console.log(tick, y-yscale(tick), incrementValue, maxMetricVal);
+                appendTickMark(svg1,x,(y-yscale(tick)),colorChart,0);
+                svg1.append("text")
+                    .text(tick)
+                    .attr("fill", colorChart)
+                    .attr("x", (x-10))
+                    .attr("y", y-yscale(tick))
+                    .style("font", tickLabelSize)
+                    .style("text-anchor","end")
+                    .style("dominant-baseline", "central");
                 tick = tick + incrementValue;
             }
             appendLine(svg1,x,y,x,(y-chartHeight),colorChart,axisLineThickness);
         //Draw Agent Results
-            if (metric==0 || metric==1 || metric==2){
-                iCC=0;
-                for (cc in cycle){ //c = cycles;
-                    iAA=0;
-                    if (iCC>=(startCycle-1)&&iCC<=(endCycle-1)){
-                        for (aa in cycle[cc]){ //a = agents; cycle[c][a] = agent results (JSON)
-                            iBB=0;
-                            if (iAA==0){
-                                for (bb in cycle[cc][aa]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                                    if (iBB==metric){
-                                        x2_agent1=(x+(chartWidth/cycle_results.length*(iCC+1)));
-                                        y2_agent1=(y-(chartHeight/maxMetric0_2*cycle[cc][aa][bb]))
-                                        if (iCC>0){ //change to >=0 if line for epoche_0 should be drawn
-                                            appendLine(svg1,x1_agent1,y1_agent1,x2_agent1,y2_agent1,colorAgent1,circleSize);
-                                        }
-                                        appendCircleOnHover(svg1,x2_agent1,y2_agent1,colorAgent1,circleSize,cycle[cc][aa][bb], maxMetric0_2);
-                                        x1_agent1=x2_agent1;
-                                        y1_agent1=y2_agent1;
-                                        break;
-                                    }
-                                    iBB++;
-                                }
-                            }
-                            if (iAA==1){
-                                for (bb in cycle[cc][aa]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                                    if (iBB==metric){
-                                        x2_agent2=(x+(chartWidth/cycle_results.length*(iCC+1)));
-                                        y2_agent2=(y-(chartHeight/maxMetric0_2*cycle[cc][aa][bb]))
-                                        if (iCC>0){ //change to >=0 if line for epoche_0 should be drawn
-                                            appendLine(svg1,x1_agent2,y1_agent2,x2_agent2,y2_agent2,colorAgent2,circleSize);
-                                        }
-                                        appendCircleOnHover(svg1,x2_agent2,y2_agent2,colorAgent2,circleSize,cycle[cc][aa][bb], maxMetric0_2);
-                                        x1_agent2=x2_agent2;
-                                        y1_agent2=y2_agent2;
-                                        break;
-                                    }
-                                    iBB++;
-                                }
-                            }
-                            iAA++;       
-                        }
+        
+        let x0_t1=0, y0_t1=0, x0_t2 = 0, y0_t2 = 0;
+        for( var i=0; i<window.aggregatedData.length; i++)
+            {
+                let epochid = window.aggregatedData[i]["Epochs"]/1000;
+                let teamId = window.aggregatedData[i]["teamId"];
+                let yvalue = window.aggregatedData[i][bindex_id[metric]];
+
+                let x1=x+xscale(epochid);
+                let y1=y-yscale(yvalue);
+
+                if (teamId == 2){
+                    if(i>1)
+                    {
+                        appendLine(svg1,x0_t2,y0_t2,x1,y1,colorAgent1,lineWidth, "linechart");
+                        
                     }
-                    iCC++;
+                    x0_t2 = x1;
+                    y0_t2 = y1;
+                    appendCircleOnHover(svg1,x1,y1,colorAgent1,circleSize, `${yvalue}` ,"linechart cycle"+epochid);
+
+
                 }
-            }
-            if (metric!=0 && metric!=1 && metric!=2){
-                iCC=0;
-                for (cc in cycle){ //c = cycles;
-                    iAA=0;
-                    if (iCC>=(startCycle-1)&&iCC<=(endCycle-1)){
-                        for (aa in cycle[cc]){ //a = agents; cycle[c][a] = agent results (JSON)
-                            iBB=0;
-                            if (iAA==0){
-                                for (bb in cycle[cc][aa]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                                    if (iBB==metric){
-                                        y2_agent1=(y-(chartHeight/maxMetric3_15*cycle[cc][aa][bb]))
-                                        break;
-                                    }
-                                    iBB++;
-                                }
-                            }
-                            if (iAA==1){
-                                for (bb in cycle[cc][aa]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                                    if (iBB==metric){
-                                        y2_agent2=(y-(chartHeight/maxMetric3_15*cycle[cc][aa][bb]))
-                                        break;
-                                    }
-                                    iBB++;
-                                }
-                            }
-                            if (iAA==2){
-                                for (bb in cycle[cc][aa]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                                    if (iBB==metric){
-                                        x2_agent1=(x+(chartWidth/cycle_results.length*(iCC+1)));
-                                        y2_agent1=(y2_agent1-(chartHeight/maxMetric3_15*cycle[cc][aa][bb]))
-                                        console.log("y2_agent1: "+y2_agent1);
-                                        if (iCC>0){ //change to >=0 if line for epoche_0 should be drawn
-                                            appendLine(svg1,x1_agent1,y1_agent1,x2_agent1,y2_agent1,colorAgent1,circleSize);
-                                        }
-                                        appendCircleOnHover(svg1,x2_agent1,y2_agent1,colorAgent1,circleSize,cycle[cc][aa][bb]);
-                                        x1_agent1=x2_agent1;
-                                        y1_agent1=y2_agent1;
-                                        break;
-                                    }
-                                    iBB++;
-                                }
-                            }
-                            if (iAA==3){
-                                for (bb in cycle[cc][aa]){ //b = behaviors; cycle[c][a][b] = behavior results (Int)
-                                    if (iBB==metric){
-                                        x2_agent2=(x+(chartWidth/cycle_results.length*(iCC+1)));
-                                        y2_agent2=(y2_agent2-(chartHeight/maxMetric3_15*cycle[cc][aa][bb]))
-                                        if (iCC>0){ //change to >=0 if line for epoche_0 should be drawn
-                                            appendLine(svg1,x1_agent2,y1_agent2,x2_agent2,y2_agent2,colorAgent2,circleSize);
-                                        }
-                                        appendCircleOnHover(svg1,x2_agent2,y2_agent2,colorAgent2,circleSize,cycle[cc][aa][bb]);
-                                        x1_agent2=x2_agent2;
-                                        y1_agent2=y2_agent2;
-                                        break;
-                                    }
-                                    iBB++;
-                                }
-                            }
-                            iAA++;       
-                        }
+                else if (teamId == 1){
+                    if(i>1)
+                    {
+                       appendLine(svg1,x0_t1,y0_t1,x1,y1,colorAgent2,lineWidth, "linechart");
+                       
                     }
-                    iCC++;
+                    x0_t1 = x1;
+                    y0_t1 = y1;
+                    appendCircleOnHover(svg1,x1,y1,colorAgent2,circleSize, `${yvalue}` ,"linechart cycle"+epochid);
                 }
+
+
             }
 
             // draw Agent's lines
             agentLineChartGroup = svg1.append("g").attr("class", "agentLineChart");
             x1_agent = x;
             y1_agent = y;
-            let headerypos = (y-chartHeight-20);
+            let headerypos = (y-chartHeight-30);
             
             let agents = ["1hakozaki", "2hakozaki", "1ppo", "2ppo"];
             for(let a in agents)
             {   
                 let agent = agents[a];
-                let xpos = headerTeamNameXpos + parseInt(a)*220;
+                let xpos = headerTeamNameXpos + parseInt(a)*chartWidth/6;
                 if(metric>2)
                 {
                     svg1.append("line")
@@ -1385,7 +1379,7 @@
                         .attr("x", xpos+45)
                         .attr("y", headerypos)
                         .attr("fill", colorAgent(agent))
-                        .style("font", font2)
+                        .style("font", font1)
                         .style("dominant-baseline", "central")
                 }
 
@@ -1396,8 +1390,11 @@
                     if(metric>2)
                     {
                         let metricVal = cycle[cc][agent][bindex_id[metric]];
-                        x2_agent=(x+(chartWidth/cycle_results.length*(cc+1)));
-                        y2_agent=(y-(chartHeight/maxMetric3_15*metricVal))
+                        // x2_agent=(x+(chartWidth/cycle_results.length*(cc+1)));
+                        // y2_agent=(y-(chartHeight/maxMetric3_15*metricVal))
+
+                        x2_agent = x+ xscale(cc+1);
+                        y2_agent = y - yscale(metricVal);
                         if(parseInt(cc)>=1)
                         {
                             // appendLine(agentLineChartGroup,x1_agent,y1_agent,x2_agent,y2_agent,colorAgent(agent),1);
@@ -1552,7 +1549,7 @@
                 .remove();
         }
 
-        function appendLine(svg,x1,y1,x2,y2,color,width){
+        function appendLine(svg,x1,y1,x2,y2,color,width, classes){
             svg.append("line")
                 .style("stroke", color)
                 .style("stroke-width", width)
@@ -1560,6 +1557,7 @@
                 .attr("y1", y1)
                 .attr("x2", x2)
                 .attr("y2", y2)
+                .attr("class", classes)
                 .on("mouseover", function onMouseOver() {
                 })
         }
@@ -1888,46 +1886,8 @@
 {
     selectedMetricHighlight();
 
-    let rev_data = [];
-    for (const [epochid, value] of Object.entries(cycle_results)) 
-    {
-        for(const [agentid, value2] of Object.entries(value))
-        {
-            
-            let agentID = agentid.substr(0,1);
-            let teamId = -1;
-            if(agentid.includes("hakozaki"))
-                teamId = 2;
-            else if(agentid.includes("ppo"))
-                teamId = 1;
-            else
-                console.log("Unrecognized team name");
-
-            let epochVal = (parseInt(epochid)+1)*1000;
-            let temp_data_pont = {"Epochs": +(epochVal), "agentId": +agentID, "teamId":teamId, ...value2};
-            // for(const [behavid, val] of Object.entries(value2))
-            // {
-            //     if(behavid in labelid_NameDictionary)
-            //     {
-            //         temp_data_pont[labelid_NameDictionary[behavid]] = val;
-            //     }
-            //     else
-            //     temp_data_pont[behavid] = val;
-
-            // }
-            // console.log(temp_data_pont);
-            rev_data.push(temp_data_pont);
-
-        }   
-    }
-
     parallelplot(rev_data);
-    // d3.select("#parallelplot svg").style("font-size", tickLabelSize);
 
-    // $(document).tooltip();
-    // $("#pommermanInfo").tooltip({
-    //     content: '<img src = "./pommerman.png"/>'
-    // });
     $(document).ready(function() {
             $('.infoIcon').tooltipster({
                 // theme: 'tooltipster-shadow',
